@@ -3,17 +3,106 @@ import cors from 'cors';
 import dotenv from "dotenv";
 import { pool } from "./db.js";
 import pkg from 'body-parser';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs'
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
+const SECRET_KEY = process.env.SECRET_KEY;
 const { json } = pkg;
 
 //Midd
 app.use(cors());
 app.use(express.json());
 
+
+const JWT_SECRET = SECRET_KEY ; // Lembre-se de usar a mesma no seu middleware
+
+//Rota de Login
+app.post('/login', async (req, res) => {
+    const connection = await pool.getConnection();
+    
+    try {
+        // Inicia a transação 
+        await connection.beginTransaction();
+
+        const { email, password } = req.body;
+
+        // 1. Busca o usuário pelo e-mail
+        const [rows] = await connection.query(
+            "SELECT id, name, email, password FROM users WHERE email = ?",
+            [email]
+        );
+
+        // Verifica se o usuário existe
+        if (rows.length === 0) {
+            return res.status(401).json({ erro: "Usuário não encontrado" });
+        }
+
+        const user = rows[0];
+
+        // 2. Comparação de senha em texto puro
+        if (password !== user.password) {
+            return res.status(401).json({ erro: "Senha incorreta" });
+        }
+
+        // 3. Geração do Token JWT para o Pinia
+        const token = jwt.sign(
+            { id: user.id, email: user.email },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        await connection.commit();
+
+        // Retorna os dados para o front-end alimentar o Store
+        res.status(200).json({
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email
+            }
+        });
+
+    } catch (e) {
+        console.error(e);
+        await connection.rollback();
+        res.status(500).json({ erro: "Falha ao realizar login" });
+    } finally {
+        //Libera a conexão de volta para o pool
+        connection.release();
+    }
+});
+
+// Rota para o auth.checkToken() do front-end
+// No seu arquivo de rotas do Node.js
+app.get('/login/verify', async (req, res) => { // Mudamos de /auth/check-token para /login/verify
+    const connection = await pool.getConnection();
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) return res.status(401).json({ valid: false });
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Opcional: buscar no banco para confirmar se o usuário ainda existe
+        const [rows] = await connection.query("SELECT id FROM users WHERE id = ?", [decoded.id]);
+        
+        if (rows.length > 0) {
+            res.json({ valid: true });
+        } else {
+            res.status(401).json({ valid: false });
+        }
+    } catch (e) {
+        res.status(401).json({ valid: false });
+    } finally {
+        connection.release();
+    }
+});
 
 //Criar artigos
 app.post('/artigos/criar', async (req, res) => {
