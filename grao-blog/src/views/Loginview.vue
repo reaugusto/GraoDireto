@@ -30,6 +30,7 @@
             const {data} = await http.post('/login', user);
             console.log(data)
             auth.setUserData(data);
+            
             await router.push({ name: 'artigos' });
         }catch(error) {
             const mensagemErro = error.response?.data?.erro || "Erro ao conectar com o servidor";

@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { pool } from "./db.js";
 import pkg from 'body-parser';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs'
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
