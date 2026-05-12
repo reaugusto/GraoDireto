@@ -1,0 +1,21 @@
+
+:root {
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Playfair+Display+SC:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&display=swap');
+  /* Cores extraídas do TechBlog */
+  --primary-color: #E5E8EB;
+  --accent-color: #67A22D; /* Azul Tech */
+  --text-main: #141C0D;
+  --text-muted: #141712;
+  --text-bt: #FFFFFF;
+  --bg-color: #E5E8EB;
+  --bg-dark: #EDF2E8;   
+
+  /* Tipografia */
+  --font-family: "Newsreader", serif;
+  --h1-size: 2.5rem;
+  --body-size: 1rem;
+
+  /* Espaçamento e Bordas */
+  --container-padding: 20px;
+  --border-radius: 12px;
+}
