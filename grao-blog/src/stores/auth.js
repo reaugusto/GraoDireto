@@ -12,6 +12,14 @@ export const useAuthStore = defineStore('auth', () => {
 
     // --- GETTERS ---
     // Em Setup Stores, computed() vira um getter
+    const fullName = computed(() => {
+        return user.value.name || 'Usuário';
+    });
+
+    const getUserID = computed(() => {
+        return user.value.id || null;
+    });
+
     const firstName = computed(() => {
         return user.value?.name?.split(' ')[0] || 'Usuário';
     });
@@ -35,6 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = null;
         isAuthenticated.value = false;
         localStorage.removeItem('user_token');
+        localStorage.removeItem('user');
     }
 
   // src/stores/auth.js
@@ -60,6 +69,8 @@ async function checkToken() {
         firstName, 
         setUserData, 
         logout,
-        checkToken
+        checkToken,
+        fullName,
+        getUserID
     };
 });

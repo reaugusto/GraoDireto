@@ -21,6 +21,12 @@ const router = createRouter({
       meta: {
         auth:true
       }
+    },
+    {
+      path: '/artigo/:id',
+      name: 'artigo-detalhe',
+      component: () => import('../views/ArtigoDetalheView.vue'),
+      props: true // Isso permite receber o :id como uma prop no componente
     }
   ],
 })

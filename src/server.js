@@ -17,7 +17,6 @@ const { json } = pkg;
 app.use(cors());
 app.use(express.json());
 
-
 const JWT_SECRET = SECRET_KEY ; // Lembre-se de usar a mesma no seu middleware
 
 //Rota de Login
@@ -151,8 +150,10 @@ try {
 
 //Listar artigos
 app.get('/artigos', async (req, res) => {
+    const connection = await pool.getConnection();
 try {
-        const [rows] = await pool.query(
+        await connection.beginTransaction();
+        const [rows] = await connection.query(
             `
             SELECT 
                 p.id, 
@@ -177,6 +178,44 @@ try {
         connection.release();
     }
     });
+
+    //buscar um único artigo
+app.get('/artigos/:id', async (req, res) => {
+    const connection = await pool.getConnection();
+    const { id } = req.params;
+
+    try {
+        const [rows] = await connection.query(`
+            SELECT 
+                p.id, 
+                p.title, 
+                p.content,
+                p.slug, 
+                u.name AS author_name, 
+                GROUP_CONCAT(t.name SEPARATOR ', ') AS tags,
+                p.published_at
+            FROM posts p
+            JOIN users u ON p.author_id = u.id
+            LEFT JOIN post_tags pt ON p.id = pt.post_id
+            LEFT JOIN tags t ON pt.tag_id = t.id
+            WHERE p.id = ?
+            GROUP BY p.id
+        `, [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ erro: "Artigo não encontrado" });
+        }
+
+        // Retorna apenas o primeiro objeto, já que o ID é único
+        res.status(200).json(rows[0]);
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ erro: "Falha ao buscar o artigo" });
+    } finally {
+        connection.release();
+    }
+});
 
 
 //Atualizar artigos
@@ -274,6 +313,27 @@ app.get('/artigos/:id/comentarios', async (req, res) => {
     }
 });
 
+// Rota para listar todas as tags
+app.get('/tags', async (req, res) => {
+    const connection = await pool.getConnection();
+
+    try {
+        // 1. Executa a query de busca
+        const [rows] = await connection.query(
+            "SELECT id, name FROM tags ORDER BY name ASC"
+        );
+
+        // 2. Retorna a lista de tags para o front-end
+        res.status(200).json(rows);
+
+    } catch (e) {
+        console.error("Erro ao buscar tags:", e);
+        res.status(500).json({ erro: "Falha ao buscar tags" });
+    } finally {
+        // 3. Libera a conexão de volta para o pool
+        connection.release();
+    }
+});
 
 app.listen(PORT, () =>{
     console.log(`Servidor MySQL rodando em http://localhost:${PORT}`);
