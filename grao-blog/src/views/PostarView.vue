@@ -1,12 +1,19 @@
 <template>
     <div class="container">
+        <router-link :to="{ name: 'artigos' }" class="voltar"><svg xmlns="http://www.w3.org/2000/svg" width="512"
+                height="512" viewBox="0 0 512 512">
+                <path fill="none" stroke="currentColor" stroke-linecap="square" stroke-miterlimit="10" stroke-width="32"
+                    d="m112 160l-64 64l64 64" />
+                <path fill="none" stroke="currentColor" stroke-linecap="square" stroke-miterlimit="10" stroke-width="32"
+                    d="M64 224h400v128" />
+            </svg> Voltar</router-link>
         <div class="topo" v-if="route.params.id == 0">
             <h2 @click="ListarArtigos()">Novo artigo</h2>
-            <button class="criar" @click="Criar()">Criar Artigo</button>
+            <button class="criar" @click="Criar()" v-if="largerScreen">Criar Artigo</button>
         </div>
         <div class="topo" v-if="route.params.id != 0">
             <h2 @click="ListarArtigos()">Editar artigo</h2>
-            <button class="criar" @click="Atualziar()">Salvar</button>
+            <button class="criar" @click="Atualziar()" v-if="largerScreen">Salvar</button>
         </div>
         <form>
             <label for="titulo">Titulo do artigo*</label>
@@ -16,9 +23,10 @@
                 @keydown.enter="dados.tags.push(tag) && (tag = '')" v-model="tag" required>
             <div class="tags-wrapper">
                 <span v-for="tag in dados.tags" :key="tag" class="tag-item-artigo">
-                    {{ tag }}   
+                    {{ tag }}
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" @click="dados.tags = dados.tags.filter(t => t !== tag)" style="cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        @click="dados.tags = dados.tags.filter(t => t !== tag)" style="cursor: pointer;">
                         <path fill="currentColor"
                             d="m12 13.4l-4.9 4.9q-.275.275-.7.275t-.7-.275t-.275-.7t.275-.7l4.9-4.9l-4.9-4.9q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l4.9 4.9l4.9-4.9q.275-.275.7-.275t.7.275t.275.7t-.275.7L13.4 12l4.9 4.9q.275.275.275.7t-.275.7t-.7.275t-.7-.275z" />
                     </svg>
@@ -29,14 +37,20 @@
             <textarea name="conteudo" id="conteudo" placeholder="Escrever o conteúdo do arquivo" v-model="dados.content"
                 required></textarea>
         </form>
+            <button class="criar" @click="Criar()" v-if="smallScreen && route.params.id == 0">Criar Artigo</button>
+            <button class="criar" @click="Atualziar()" v-if="smallScreen && route.params.id != 0">Salvar</button>
     </div>
 
 </template>
 
 <script setup>
 import { ref, onMounted, reactive } from 'vue';
-import { useRoute,useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import http from '@/services/http.js';
+import { useMatchMedia } from 'vue-composable';
+
+const {matches: smallScreen} = useMatchMedia('(max-width: 768px)');
+const {matches: largerScreen }= useMatchMedia('(min-width: 769px)');
 
 const route = useRoute();
 const router = useRouter();
@@ -135,6 +149,22 @@ function gerarSlug(title) {
     padding: 0 25%;
 }
 
+.voltar {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 15px;
+    text-decoration: none;
+    color: #758269;
+    align-items: center;
+    font-size: 1.2em;
+}
+
+.voltar svg {
+    height: 24px;
+    width: 24px;
+    fill: #758269;
+}
+
 .topo {
     display: flex;
     flex-direction: row;
@@ -215,5 +245,16 @@ textarea {
     font-size: 1.2em;
     padding: 20px;
 
+}
+
+@media only screen and (max-width: 768px) {
+    .container {
+        gap: 0;
+        padding: 0 5%;
+        margin-bottom: 5%;
+    }
+    .criar{
+        width: 100%;
+    }
 }
 </style>

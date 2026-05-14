@@ -7,48 +7,40 @@
         <div class="listTag">
             <button v-for="tag in tags" :key="tag.id" class="tag-item" @click="ListarArtigosTag(tag.id)">{{ tag.name
             }}</button>
-            <input type="text" class="pesquisar" placeholder="Perquisar" @keyup="Buscar()" v-model="termo">
         </div>
+        <input type="text" class="pesquisar" placeholder="Perquisar" @keyup="Buscar()" v-model="termo">
 
-            <article v-for="artigo in artigosPaginados" :key="artigo.id" class="artigo-item">
-    <img :src="`../src/assets/img/${artigo.author_name}.png`" alt="">
-    <div class="contArtigo">
-        <h4 @click="$router.push({ name: 'artigo-detalhe', params: { id: artigo.id } })" style="cursor: pointer;">
-            {{ artigo.title }}
-        </h4>
-        <p>{{ artigo.content }}</p>
-        <div class="tags-wrapper">
-            <span v-for="tag in formatarTags(artigo.tags)" :key="tag" class="tag-item-artigo">
-                {{ tag }}
-            </span>
-        </div>
-    </div>
-    <div class="icone" v-if="user.name == artigo.author_name"
-        @click="$router.push({ name: 'postar', params: { id: artigo.id } })" style="cursor: pointer;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-            <path fill="#758269" d="M5 21h14c1.1 0 2-.9 2-2v-7h-2v7H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2" />
-            <path fill="#758269" d="M7 13v3c0 .55.45 1 1 1h3c.27 0 .52-.11.71-.29l9-9a.996.996 0 0 0 0-1.41l-3-3a.996.996 0 0 0-1.41 0l-9.01 8.99A1 1 0 0 0 7 13m10-7.59L18.59 7L17.5 8.09L15.91 6.5zm-8 8l5.5-5.5l1.59 1.59l-5.5 5.5H9z" />
-        </svg>
-    </div>
-</article>
+        <article v-for="artigo in artigosPaginados" :key="artigo.id" class="artigo-item">
+            <img :src="`../src/assets/img/${artigo.author_name}.png`" alt="">
+            <div class="contArtigo">
+                <h4 @click="$router.push({ name: 'artigo-detalhe', params: { id: artigo.id } })"
+                    style="cursor: pointer;">
+                    {{ artigo.title }}
+                </h4>
+                <p>{{ artigo.content }}</p>
+                <div class="tags-wrapper">
+                    <span v-for="tag in formatarTags(artigo.tags)" :key="tag" class="tag-item-artigo">
+                        {{ tag }}
+                    </span>
+                </div>
+            </div>
+            <div class="icone" v-if="user.name == artigo.author_name"
+                @click="$router.push({ name: 'postar', params: { id: artigo.id } })" style="cursor: pointer;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path fill="#758269"
+                        d="M5 21h14c1.1 0 2-.9 2-2v-7h-2v7H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2" />
+                    <path fill="#758269"
+                        d="M7 13v3c0 .55.45 1 1 1h3c.27 0 .52-.11.71-.29l9-9a.996.996 0 0 0 0-1.41l-3-3a.996.996 0 0 0-1.41 0l-9.01 8.99A1 1 0 0 0 7 13m10-7.59L18.59 7L17.5 8.09L15.91 6.5zm-8 8l5.5-5.5l1.59 1.59l-5.5 5.5H9z" />
+                </svg>
+            </div>
+        </article>
 
-<paginate
-    v-model="paginaAtual"
-    :page-count="totalPaginas"
-    :page-range="3"
-    :margin-pages="1"
-    :click-handler="mudarPagina"
-    :prev-text="''"
-    :next-text="''"
-    :container-class="'pagination'"
-    :page-class="'page-item'"
-    :prev-class="'page-item'"
-    :next-class="'page-item'"
-    :link-class="'page-link'"
->
-<span slot="prevContent">Changed previous button</span>
-  <span slot="nextContent">Changed next button</span>
-</paginate>
+        <paginate v-model="paginaAtual" :page-count="totalPaginas" :page-range="3" :margin-pages="1"
+            :click-handler="mudarPagina" :prev-text="''" :next-text="''" :container-class="'pagination'"
+            :page-class="'page-item'" :prev-class="'page-item'" :next-class="'page-item'" :link-class="'page-link'">
+            <span slot="prevContent">Changed previous button</span>
+            <span slot="nextContent">Changed next button</span>
+        </paginate>
     </div>
 
 </template>
@@ -117,11 +109,11 @@ async function Buscar() {
         try {
             const { data } = await http.get(`/artigos/busca?q=${termo.value}`);
             artigos.value = data;
-            paginaAtual.value = 1; 
+            paginaAtual.value = 1;
         } catch (error) {
             console.error(error);
         }
-    } else { 
+    } else {
         ListarArtigos();
     }
 }
@@ -139,7 +131,7 @@ onMounted(() => {
 });
 </script>
 
-<style >
+<style>
 #container {
     height: calc(100vh - 64px);
     display: flex;
@@ -195,9 +187,7 @@ onMounted(() => {
 .tags-wrapper {
     display: flex;
     flex-wrap: wrap;
-    /* Para quebrar linha se houver muitas tags */
     gap: 8px;
-    /* Espaço entre as tags */
     margin-top: 10px;
 }
 
@@ -266,6 +256,7 @@ p {
     font-weight: 400;
     font-size: .6em;
 }
+
 .pagination {
     display: flex;
     list-style: none;
@@ -279,11 +270,69 @@ li.page-item.active {
     background-color: var(--bg-dark);
     border-radius: 50px;
 }
+
 li.page-item {
     padding: 10px 14px;
     /* background-color: green; */
     border-radius: 50px;
     font-weight: 500;
     cursor: pointer;
+}
+
+@media only screen and (max-width: 768px) {
+    #container {
+        padding: 0 5%;
+    }
+
+    .topo {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        padding: 25px 10px;
+        justify-content: space-between;
+    }
+
+    .listTag {
+        display: flex;
+        flex-wrap: nowrap;
+        width: 100%;
+        gap: 10px;
+        margin-bottom: 25px;
+        overflow-x: scroll;
+        overflow-y: scroll;
+        -ms-overflow-y: scroll;
+    }
+
+    .tag-item {
+        height: auto;
+        padding: 0px 25px;
+    }
+
+    .contArtigo {
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
+        gap: 2px;
+        margin: 20px 0 0 0;
+    }
+
+    .artigo-item {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        width: 90vw;
+    }
+
+    .artigo-item img {
+        height: 60px;
+        width: 60px;
+    }
+
+    .contArtigo p {
+        font-size: .8em;
+        width: 60vw;
+
+    }
+
 }
 </style>
