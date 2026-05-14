@@ -106,44 +106,49 @@ app.get('/login/verify', async (req, res) => { // Mudamos de /auth/check-token p
 //Criar artigos
 app.post('/artigos/criar', async (req, res) => {
     const connection = await pool.getConnection();
-try {
+    try {
         await connection.beginTransaction();
 
-        const {author_id, title, content, slug, tags} = req.body;
+        const { author_id, title, content, slug, tags } = req.body;
+        
+        // 1. Inserir o Post
         const [result] = await connection.query(
             "INSERT INTO posts (author_id, title, content, slug) VALUES (?,?,?,?)",
             [author_id, title, content, slug]
         );
 
-
         const newPostId = result.insertId;
-        // 2. Processar nomes de Tags para obter IDs
         const tagIds = [];
         
+        // 2. Processar Tags
         if (tags && tags.length > 0) {
             for (const tagName of tags) {
-                // Insere a tag se não existir (ignora se for duplicada)
+                // Insere se não existir
                 await connection.query('INSERT IGNORE INTO tags (name) VALUES (?)', [tagName]);
-                tagIds.push(rows[0].id);
-                // Busca o ID (seja ele recém-criado ou já existente)
+                
+                // Busca o ID (CORRIGIDO: primeiro busca, depois dá o push)
                 const [rows] = await connection.query('SELECT id FROM tags WHERE name = ?', [tagName]);
-                tagIds.push(rows[0].id);
+                
+                if (rows.length > 0) {
+                    tagIds.push(rows[0].id);
+                }
             }
         }
-        // 3. Vincular o novo Post às Tags na tabela pivô
+
+        // 3. Vincular na tabela pivô (CORRIGIDO: usar connection e não db)
         if (tagIds.length > 0) {
             const tagValues = tagIds.map(tagId => [newPostId, tagId]);
-            await db.query('INSERT INTO post_tags (post_id, tag_id) VALUES ?', [tagValues]);
+            await connection.query('INSERT INTO post_tags (post_id, tag_id) VALUES ?', [tagValues]);
         }
 
         await connection.commit();
+        res.status(201).json({ id: newPostId, author_id, title, content, slug, tags });
 
-        res.status(201).json({id: author_id, title, content, slug, tags});
-    }catch (e) {
-        console.error(e);
+    } catch (e) {
+        console.error("Erro na API:", e);
         await connection.rollback();
-        res.status(500).json({erro: "Falha ao criar usuário"});
-    }finally {
+        res.status(500).json({ erro: "Falha ao criar Post" });
+    } finally {
         connection.release();
     }    
 });
@@ -178,6 +183,92 @@ try {
         connection.release();
     }
     });
+
+    //Lista artigo por tag
+    app.get('/artigos/tag/:tagId', async (req, res) => {
+    const { tagId } = req.params;
+    const connection = await pool.getConnection();
+
+    try {
+        // Query otimizada: 
+        // 1. Filtra posts que possuem a tag específica via subquery.
+        // 2. Faz o JOIN para trazer os dados completos do autor e todas as tags do post.
+        const query = `
+            SELECT 
+                p.id, 
+                p.title, 
+                p.content, 
+                p.slug, 
+                u.name AS author_name, 
+                GROUP_CONCAT(t.name SEPARATOR ', ') AS tags,
+                p.published_at
+            FROM posts p
+            JOIN users u ON p.author_id = u.id
+            LEFT JOIN post_tags pt ON p.id = pt.post_id
+            LEFT JOIN tags t ON pt.tag_id = t.id
+            WHERE p.id IN (
+                SELECT post_id 
+                FROM post_tags 
+                WHERE tag_id = ?
+            )
+            GROUP BY p.id
+            ORDER BY p.published_at DESC;
+        `;
+
+        const [rows] = await connection.query(query, [tagId]);
+
+        // Formatação para que o campo tags retorne como um array no JSON
+        const formattedPosts = rows.map(post => ({
+            ...post,
+            tags: post.tags ? post.tags.split(', ') : []
+        }));
+
+        res.status(200).json(formattedPosts);
+
+    } catch (error) {
+        console.error("Erro ao buscar por ID da tag:", error);
+        res.status(500).json({ erro: "Falha ao processar a busca por categoria." });
+    } finally {
+        connection.release();
+    }
+});
+
+//Lista artigo por busca
+app.get('/artigos/busca', async (req, res) => {
+    const { q } = req.query; // Exemplo: /artigos/busca?q=tecnologia
+    const connection = await pool.getConnection();
+
+    try {
+        const searchTerm = `%${q}%`;
+        const query = `
+            SELECT 
+                p.id, p.title, p.content, p.slug, 
+                u.name AS author_name, 
+                GROUP_CONCAT(t.name SEPARATOR ', ') AS tags,
+                p.published_at
+            FROM posts p
+            JOIN users u ON p.author_id = u.id
+            LEFT JOIN post_tags pt ON p.id = pt.post_id
+            LEFT JOIN tags t ON pt.tag_id = t.id
+            WHERE p.title LIKE ? OR p.content LIKE ?
+            GROUP BY p.id
+            ORDER BY p.published_at DESC;
+        `;
+
+        const [rows] = await connection.query(query, [searchTerm, searchTerm]);
+
+        const formattedPosts = rows.map(post => ({
+            ...post,
+            tags: post.tags ? post.tags.split(', ') : []
+        }));
+
+        res.status(200).json(formattedPosts);
+    } catch (e) {
+        res.status(500).json({ erro: "Erro ao realizar busca" });
+    } finally {
+        connection.release();
+    }
+});
 
     //buscar um único artigo
 app.get('/artigos/:id', async (req, res) => {
@@ -309,6 +400,35 @@ app.get('/artigos/:id/comentarios', async (req, res) => {
     } catch (e) {
         res.status(500).json({ erro: "Erro ao buscar comentários" });
     } finally {
+        connection.release();
+    }
+});
+
+app.delete('/comentarios/deletar/:id', async (req, res) => {
+    const { id } = req.params;
+    const connection = await pool.getConnection();
+
+    try {
+        // Verifica se o comentário existe antes de tentar deletar (opcional, mas recomendado para logs)
+        const [verificacao] = await connection.query("SELECT id FROM comments WHERE id = ?", [id]);
+        
+        if (verificacao.length === 0) {
+            return res.status(404).json({ erro: "Comentário não encontrado." });
+        }
+
+        // Executa a remoção
+        await connection.query("DELETE FROM comments WHERE id = ?", [id]);
+
+        res.status(200).json({ 
+            mensagem: "Comentário removido com sucesso!",
+            id_removido: id 
+        });
+
+    } catch (e) {
+        console.error("Erro ao deletar comentário:", e);
+        res.status(500).json({ erro: "Falha interna ao tentar remover o comentário." });
+    } finally {
+        // Liberta a conexão de volta para o pool para manter a performance da API
         connection.release();
     }
 });
